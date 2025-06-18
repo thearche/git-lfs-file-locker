@@ -6,6 +6,10 @@
   "publisher": "TheArche",
   "icon": "icon.png",
   "readme": "This extension adds a context menu item to lock/unlock files with Git LFS.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/thearche/git-lfs-file-locker"
+  },
   "engines": {
     "vscode": "^1.80.0"
   },
