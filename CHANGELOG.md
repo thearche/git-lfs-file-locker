@@ -6,6 +6,20 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.3.0] - 2025-06-25
+
+### Hinzugefügt (Added)
+
+- **Webview für aktive Git LFS Locks:** Eine neue Webview zeigt alle aktiven Git LFS Locks als Tabelle an. Die Tabelle enthält die Spalten: ID, Dateipfad (klickbar), Gesperrt von, Gesperrt am und Aktion (Entsperren).
+- **Direktes Entsperren aus der Webview:** Dateien können jetzt direkt aus der Webview über einen Entsperren-Button entsperrt werden.
+- **Öffnen im VS Code Explorer:** Ein Klick auf den Dateipfad in der Webview öffnet die entsprechende Datei im VS Code Explorer.
+- **Automatische und manuelle Aktualisierung der Webview:** Die Webview aktualisiert sich automatisch, wenn sie sichtbar wird, und bietet zusätzlich einen manuellen Refresh-Button.
+- **Verbesserte Pfadauflösung:** Die Datei wird nun zuverlässig relativ zum Stammverzeichnis des Git-Repositories gefunden, nicht nur zum Workspace-Ordner.
+
+### Behoben (Fixed)
+
+- **Reveal in Explorer:** Funktioniert jetzt auch, wenn das Workspace-Root nicht mit dem Git-Repository-Root übereinstimmt.
+
 ## [0.2.0] - 2025-06-19
 
 ### Hinzugefügt (Added)
