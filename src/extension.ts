@@ -2,11 +2,12 @@
 import * as vscode from 'vscode';
 import * as cp from 'child_process';
 import { promisify } from 'util';
-import { combinePaths, getBasename, getRelativePath } from './utils';
+import { getBasename, getRelativePath, getWorkspacePath, getNonce, getUriForCommand } from './utils';
+import * as path from 'path';
 
 const exec = promisify(cp.exec);
 
-// Interface für die geparsten LFS Lock Daten
+// Interface for parsed LFS lock data
 interface LfsLock {
     id: string;
     path: string;
@@ -16,26 +17,55 @@ interface LfsLock {
     locked_at: string;
 }
 
-// Hält eine Referenz auf das aktuell geöffnete Panel
+// Holds a reference to the currently open panel
 let lfsLocksPanel: vscode.WebviewPanel | undefined = undefined;
 
-function getWorkspacePath(uri?: vscode.Uri): string | undefined {
-    if (uri) {
-        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
-        if (workspaceFolder) {
-            return workspaceFolder.uri.fsPath;
+async function executeLfsCommand(command: string, fileUri: vscode.Uri) {
+    let effectiveFileUri = fileUri;
+    const originalFilePath = fileUri.fsPath;
+
+    // If trying to lock or unlock a .al file, try to find the layout file and act on it instead.
+    if ((command === 'lock' || command === 'unlock') && originalFilePath.toLowerCase().endsWith('.al')) {
+        try {
+            const alFileContent = await vscode.workspace.fs.readFile(fileUri);
+            const contentStr = Buffer.from(alFileContent).toString('utf8');
+
+            // Regex to find WordLayout or LayoutFile path
+            const layoutRegex = /(?:WordLayout|LayoutFile)\s*=\s*'([^']+)';/i;
+            const match = contentStr.match(layoutRegex);
+
+            if (match && match[1]) {
+                const layoutPath = match[1];
+                const workspaceRoot = getWorkspacePath(fileUri);
+                if (!workspaceRoot) {
+                    vscode.window.showErrorMessage(`Could not determine workspace root for '${getBasename(originalFilePath)}'.`);
+                    return;
+                }
+                const docxFilePath = path.resolve(workspaceRoot, layoutPath);
+                const docxFileUri = vscode.Uri.file(docxFilePath);
+
+                try {
+                    // Check if the layout file exists
+                    await vscode.workspace.fs.stat(docxFileUri);
+                    effectiveFileUri = docxFileUri;
+                    vscode.window.showInformationMessage(`Redirected ${command} from ${getBasename(originalFilePath)} to ${getBasename(docxFilePath)}.`);
+                } catch {
+                    // Corresponding layout file does not exist
+                    vscode.window.showWarningMessage(`Could not find layout file '${layoutPath}' (resolved to '${docxFilePath}') specified in '${getBasename(originalFilePath)}'. No file was ${command}ed.`);
+                    return;
+                }
+            } else {
+                vscode.window.showWarningMessage(`No WordLayout or LayoutFile property found in '${getBasename(originalFilePath)}'. No file was ${command}ed.`);
+                return;
+            }
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Error reading file '${getBasename(originalFilePath)}': ${error.message}`);
+            return;
         }
     }
-    // Fallback if no URI or not in a workspace folder (less ideal)
-    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
-        return vscode.workspace.workspaceFolders[0].uri.fsPath;
-    }
-    return undefined;
-}
 
-async function executeLfsCommand(command: string, fileUri: vscode.Uri, action: string) {
-    const filePath = fileUri.fsPath;
-    const workspacePath = getWorkspacePath(fileUri);
+    const filePath = effectiveFileUri.fsPath;
+    const workspacePath = getWorkspacePath(effectiveFileUri);
 
     if (!workspacePath) {
         vscode.window.showErrorMessage('File is not part of a workspace. Cannot determine Git LFS context.');
@@ -57,10 +87,82 @@ async function executeLfsCommand(command: string, fileUri: vscode.Uri, action: s
     }
     terminal.sendText(`git lfs ${command} "${relativeFilePath}"`);
     terminal.show();
-    vscode.window.showInformationMessage(`Attempting to ${action} "${getBasename(filePath)}" with Git LFS... Check the 'Git LFS' terminal for output.`);
+    vscode.window.showInformationMessage(`Attempting to ${command} "${getBasename(filePath)}" with Git LFS... Check the 'Git LFS' terminal for output.`);
 }
 
-// NEU: Sperren abrufen und die Daten an das Webview senden
+class LfsLockTreeItem extends vscode.TreeItem {
+    constructor(
+        public readonly label: string,
+        public readonly lock: LfsLock
+    ) {
+        super(label, vscode.TreeItemCollapsibleState.None);
+        this.tooltip = `${lock.path}\nID: ${lock.id}\nLocked by: ${lock.owner.name}\nLocked at: ${new Date(lock.locked_at).toLocaleString()}`;
+        this.description = `by ${lock.owner.name} at ${new Date(lock.locked_at).toLocaleTimeString()}`;
+        this.iconPath = new vscode.ThemeIcon('lock');
+        this.contextValue = 'lfsLock';
+        this.command = {
+            command: 'git-lfs-file-locker.revealFileFromView',
+            title: 'Reveal File',
+            arguments: [this]
+        };
+    }
+}
+
+class LfsLocksTreeDataProvider implements vscode.TreeDataProvider<LfsLockTreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<LfsLockTreeItem | undefined | null | void> = new vscode.EventEmitter<LfsLockTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<LfsLockTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+
+    refresh(): void {
+        this._onDidChangeTreeData.fire();
+    }
+
+    getTreeItem(element: LfsLockTreeItem): vscode.TreeItem {
+        return element;
+    }
+
+    async getChildren(element?: LfsLockTreeItem): Promise<LfsLockTreeItem[]> {
+        if (element) {
+            return []; // No children for locks
+        }
+
+        const workspacePath = getWorkspacePath();
+        if (!workspacePath) {
+            // Return a tree item with a message if not in a workspace.
+            const item = new vscode.TreeItem("Please open a folder or workspace to see LFS locks.");
+            item.iconPath = new vscode.ThemeIcon('info');
+            return [item as LfsLockTreeItem];
+        }
+
+        try {
+            const { stdout } = await exec('git lfs locks --json', { cwd: workspacePath });
+
+            if (!stdout || stdout.trim() === '') {
+                const item = new vscode.TreeItem("No active Git LFS locks found.");
+                item.iconPath = new vscode.ThemeIcon('check');
+                return [item as LfsLockTreeItem];
+            }
+
+            const parsedData = JSON.parse(stdout);
+            const locksList: LfsLock[] = Array.isArray(parsedData) ? parsedData : (parsedData.locks || []);
+
+            if (locksList.length === 0) {
+                const item = new vscode.TreeItem("No active Git LFS locks found.");
+                item.iconPath = new vscode.ThemeIcon('check');
+                return [item as LfsLockTreeItem];
+            }
+
+            return locksList.map(lock => new LfsLockTreeItem(path.basename(lock.path), lock));
+
+        } catch (error: any) {
+            console.error("Failed to fetch LFS locks:", error);
+            const item = new vscode.TreeItem("Error fetching LFS locks.");
+            item.tooltip = error.message;
+            item.iconPath = new vscode.ThemeIcon('error');
+            return [item as LfsLockTreeItem];
+        }
+    }
+}
+
 async function fetchLocksAndUpdateWebview(webview: vscode.Webview) {
     const workspacePath = getWorkspacePath();
     if (!workspacePath) {
@@ -70,7 +172,6 @@ async function fetchLocksAndUpdateWebview(webview: vscode.Webview) {
 
     try {
         const { stdout } = await exec('git lfs locks --json', { cwd: workspacePath });
-
         if (!stdout || stdout.trim() === '') {
             webview.postMessage({ command: 'update', locks: [] });
             return;
@@ -78,7 +179,6 @@ async function fetchLocksAndUpdateWebview(webview: vscode.Webview) {
 
         const parsedData = JSON.parse(stdout);
         const locksList: LfsLock[] = Array.isArray(parsedData) ? parsedData : parsedData.locks || [];
-
         webview.postMessage({ command: 'update', locks: locksList });
 
     } catch (error: any) {
@@ -87,112 +187,21 @@ async function fetchLocksAndUpdateWebview(webview: vscode.Webview) {
     }
 }
 
-// ÜBERARBEITET: showLocksView verwaltet jetzt den Lebenszyklus des Webview-Panels.
-async function showLocksView() {
-    const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
-
-    if (lfsLocksPanel) {
-        lfsLocksPanel.reveal(column);
-        await fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
-        return;
-    }
-
-    lfsLocksPanel = vscode.window.createWebviewPanel(
-        'gitLfsLocks',
-        'Active Git LFS Locks',
-        column || vscode.ViewColumn.One,
-        {
-            enableScripts: true, // Wichtig, um JavaScript im Webview zu erlauben
-            retainContextWhenHidden: true // Sorgt dafür, dass der Webview-Inhalt im Hintergrund erhalten bleibt
-        }
-    );
-
-    lfsLocksPanel.webview.html = getWebviewContent(lfsLocksPanel.webview);
-    await fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
-
-    // NEU: Aktualisiert die Ansicht, wenn sie wieder sichtbar wird
-    lfsLocksPanel.onDidChangeViewState(
-        async e => {
-            if (e.webviewPanel.visible) {
-                await fetchLocksAndUpdateWebview(lfsLocksPanel!.webview);
-            }
-        }
-    );
-
-    // NEU: Listener für Nachrichten aus dem Webview (z.B. Klick auf "Unlock")
-    lfsLocksPanel.webview.onDidReceiveMessage(
-        async message => {
-            const workspacePath = getWorkspacePath();
-            if (!workspacePath) { return; }
-
-            switch (message.command) {
-                case 'unlockFile':
-                    try {
-                        // Führe den Unlock-Befehl im Hintergrund aus
-                        await exec(`git lfs unlock --id=${message.lockId}`, { cwd: workspacePath });
-                        vscode.window.showInformationMessage(`Successfully unlocked file (ID: ${message.lockId}).`);
-                        // Lade die Liste neu, um die Änderung anzuzeigen
-                        await fetchLocksAndUpdateWebview(lfsLocksPanel!.webview);
-                    } catch (error: any) {
-                        vscode.window.showErrorMessage(`Failed to unlock file: ${error.message}`);
-                    }
-                    return;
-
-                case 'refresh':
-                    await fetchLocksAndUpdateWebview(lfsLocksPanel!.webview);
-                    return;
-
-                // NEU: Verwende den relativen Pfad, um die Datei im Explorer anzuzeigen
-                case 'revealFile':
-                    await vscode.commands.executeCommand('revealInExplorer', vscode.Uri.file(combinePaths(workspacePath, message.path)));
-                    return;
-            }
-        },
-        undefined
-    );
-
-    // NEU: Setzt die Referenz zurück, wenn das Panel geschlossen wird
-    lfsLocksPanel.onDidDispose(
-        () => {
-            lfsLocksPanel = undefined;
-        },
-        null
-    );
-}
-
-function getNonce() {
-    let text = '';
-    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-    for (let i = 0; i < 32; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-    return text;
-}
-
-// ÜBERARBEITET: getWebviewContent enthält jetzt JavaScript für die Interaktion.
-function getWebviewContent(webview: vscode.Webview): string {
+function getWebviewContent(webview: vscode.Webview, extensionUri: vscode.Uri): string {
     // Use a nonce to only allow specific scripts to be run
     const nonce = getNonce();
-    // Die Tabelle wird jetzt dynamisch per JavaScript gefüllt.
+    const styleUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'style.css'));
+    const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'src', 'main.js'));
+
     return `
         <!DOCTYPE html>
         <html lang="en">
         <head>
             <meta charset="UTF-8">
-			<meta http-equiv="Content-Security-Policy" content="default-src 'unsafe-inline'"; script-src 'nonce-${nonce}'>
+            <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource}; script-src 'nonce-${nonce}';">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
             <title>Active Git LFS Locks</title>
-            <style>
-                body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); background-color: var(--vscode-editor-background); }
-                table { width: 100%; border-collapse: collapse; }
-                th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--vscode-editor-widget-border); }
-                th { background-color: var(--vscode-side-bar-background); }
-                button { background-color: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 5px 10px; cursor: pointer; border-radius: 2px; }
-                button:hover { background-color: var(--vscode-button-hoverBackground); }
-                .actions-header { display: flex; justify-content: space-between; align-items: center; }
-                a { color: var(--vscode-textLink-foreground); cursor: pointer; }
-                a:hover { text-decoration: underline; }
-            </style>
+            <link href="${styleUri}" rel="stylesheet">
         </head>
         <body>
             <div class="actions-header">
@@ -210,93 +219,152 @@ function getWebviewContent(webview: vscode.Webview): string {
                     </tr>
                 </thead>
                 <tbody>
-                    <!-- Inhalt wird dynamisch eingefügt -->
+                    <!-- Content is dynamically inserted -->
                 </tbody>
             </table>
 
-            <script nonce="${nonce}">
-                const vscode = acquireVsCodeApi();
-                const tableBody = document.querySelector('#locks-table tbody');
-                const refreshButton = document.getElementById('refresh-button');
-
-                window.addEventListener('message', event => {
-                    const message = event.data;
-                    if (message.command === 'update') {
-                        updateTable(message.locks);
-                    } else if (message.command === 'error') {
-                        tableBody.innerHTML = \`<tr><td colspan="5">\${message.message}</td></tr>\`;
-                    }
-                });
-
-                function updateTable(locks) {
-                    if (!locks || locks.length === 0) {
-                        tableBody.innerHTML = '<tr><td colspan="5">No active Git LFS locks found.</td></tr>';
-                        return;
-                    }
-                    tableBody.innerHTML = locks.map(lock => \`
-                        <tr>
-                            <td>\${lock.id}</td>
-                            <td><a class="file-link" data-path="\${lock.path}">\${lock.path}</a></td>
-                            <td>\${lock.owner.name}</td>
-                            <td>\${new Date(lock.locked_at).toLocaleString()}</td>
-                            <td><button class="unlock-button" data-lock-id="\${lock.id}">Unlock</button></td>
-                        </tr>
-                    \`).join('');
-                }
-
-                document.addEventListener('click', event => {
-                    if (event.target.classList.contains('unlock-button')) {
-                        const lockId = event.target.dataset.lockId;
-                        vscode.postMessage({ command: 'unlockFile', lockId: lockId });
-                    } else if (event.target.classList.contains('file-link')) {
-                        const filePath = event.target.dataset.path;
-                        vscode.postMessage({ command: 'revealFile', path: filePath });
-                    }
-                });
-
-                refreshButton.addEventListener('click', () => {
-                    vscode.postMessage({ command: 'refresh' });
-                });
-            </script>
+            <script nonce="${nonce}" src="${scriptUri}"></script>
         </body>
         </html>
     `;
 }
 
 export function activate(context: vscode.ExtensionContext) {
+    const lfsLocksTreeDataProvider = new LfsLocksTreeDataProvider();
+    vscode.window.registerTreeDataProvider('gitLfsLocksView', lfsLocksTreeDataProvider);
+
     let lockFileDisposable = vscode.commands.registerCommand('git-lfs-file-locker.lockFile', async (uri: vscode.Uri) => {
-        if (!uri || !uri.fsPath) {
-            // If called from command palette, try active editor
-            const activeEditor = vscode.window.activeTextEditor;
-            if (activeEditor) {
-                uri = activeEditor.document.uri;
-            } else {
-                vscode.window.showErrorMessage('No file selected or active to lock.');
-                return;
-            }
+        const fileUri = getUriForCommand(uri);
+        if (!fileUri) {
+            vscode.window.showErrorMessage('No file selected or active to lock.');
+            return;
         }
-        await executeLfsCommand('lock', uri, 'lock');
+        await executeLfsCommand('lock', fileUri);
     });
 
     let unlockFileDisposable = vscode.commands.registerCommand('git-lfs-file-locker.unlockFile', async (uri: vscode.Uri) => {
-        if (!uri || !uri.fsPath) {
-            const activeEditor = vscode.window.activeTextEditor;
-            if (activeEditor) {
-                uri = activeEditor.document.uri;
-            } else {
-                vscode.window.showErrorMessage('No file selected or active to unlock.');
-                return;
-            }
+        const fileUri = getUriForCommand(uri);
+        if (!fileUri) {
+            vscode.window.showErrorMessage('No file selected or active to unlock.');
+            return;
         }
-        await executeLfsCommand('unlock', uri, 'unlock');
+        await executeLfsCommand('unlock', fileUri);
     });
 
-    let showLocksDisposable = vscode.commands.registerCommand('git-lfs-file-locker.showLocks', showLocksView);
+    let showLocksDisposable = vscode.commands.registerCommand('git-lfs-file-locker.showLocks', () => {
+        const column = vscode.window.activeTextEditor
+            ? vscode.window.activeTextEditor.viewColumn
+            : undefined;
 
-    context.subscriptions.push(lockFileDisposable, unlockFileDisposable, showLocksDisposable);
+        if (lfsLocksPanel) {
+            lfsLocksPanel.reveal(column);
+            fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
+            return;
+        }
+
+        const panel = vscode.window.createWebviewPanel(
+            'gitLfsLocks',
+            'Git LFS Locks',
+            column || vscode.ViewColumn.One,
+            {
+                enableScripts: true,
+                localResourceRoots: [context.extensionUri]
+            }
+        );
+        lfsLocksPanel = panel;
+
+        panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
+        fetchLocksAndUpdateWebview(panel.webview);
+
+        panel.onDidDispose(() => {
+            lfsLocksPanel = undefined;
+        }, null, context.subscriptions);
+
+        panel.webview.onDidReceiveMessage(async message => {
+            const workspacePath = getWorkspacePath();
+            if (!workspacePath) { return; }
+
+            switch (message.command) {
+                case 'unlockFile':
+                    try {
+                        await exec(`git lfs unlock --id=${message.lockId}`, { cwd: workspacePath });
+                        vscode.window.showInformationMessage(`Successfully unlocked file (ID: ${message.lockId}).`);
+                        if (lfsLocksPanel) {
+                            fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
+                        }
+                        lfsLocksTreeDataProvider.refresh();
+                    } catch (error: any) {
+                        vscode.window.showErrorMessage(`Failed to unlock file: ${error.message}`);
+                    }
+                    return;
+
+                case 'revealFile':
+                    try {
+                        const { stdout: gitRepoPath } = await exec('git rev-parse --show-toplevel', { cwd: workspacePath });
+                        const repoRoot = gitRepoPath.trim();
+                        const absoluteFilePath = path.join(repoRoot, message.path);
+                        const fileUri = vscode.Uri.file(absoluteFilePath);
+                        vscode.commands.executeCommand('revealInExplorer', fileUri);
+                    } catch (error: any) {
+                        vscode.window.showErrorMessage(`Could not reveal file: ${error.message}`);
+                    }
+                    return;
+                case 'refresh':
+                    if (lfsLocksPanel) {
+                        fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
+                    }
+                    return;
+            }
+        });
+    });
+
+    let refreshLocksDisposable = vscode.commands.registerCommand('git-lfs-file-locker.refreshLocks', () => {
+        lfsLocksTreeDataProvider.refresh();
+        if (lfsLocksPanel) {
+            fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
+        }
+    });
+
+    let unlockFileFromViewDisposable = vscode.commands.registerCommand('git-lfs-file-locker.unlockFileFromView', async (item: LfsLockTreeItem) => {
+        const workspacePath = getWorkspacePath();
+        if (!workspacePath || !item.lock) { return; }
+        try {
+            await exec(`git lfs unlock --id=${item.lock.id}`, { cwd: workspacePath });
+            vscode.window.showInformationMessage(`Successfully unlocked file: ${item.lock.path}`);
+            lfsLocksTreeDataProvider.refresh();
+            if (lfsLocksPanel) {
+                fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
+            }
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Failed to unlock file: ${error.message}`);
+        }
+    });
+
+    let revealFileFromViewDisposable = vscode.commands.registerCommand('git-lfs-file-locker.revealFileFromView', async (item: LfsLockTreeItem) => {
+        const workspacePath = getWorkspacePath();
+        if (!workspacePath || !item.lock) { return; }
+        try {
+            const { stdout: gitRepoPath } = await exec('git rev-parse --show-toplevel', { cwd: workspacePath });
+            const repoRoot = gitRepoPath.trim();
+            const absoluteFilePath = path.join(repoRoot, item.lock.path);
+            const fileUri = vscode.Uri.file(absoluteFilePath);
+            await vscode.commands.executeCommand('revealInExplorer', fileUri);
+            await vscode.commands.executeCommand('vscode.open', fileUri);
+        } catch (error: any) {
+            vscode.window.showErrorMessage(`Could not reveal file: ${error.message}`);
+        }
+    });
+
+    context.subscriptions.push(
+        lockFileDisposable,
+        unlockFileDisposable,
+        showLocksDisposable,
+        refreshLocksDisposable,
+        unlockFileFromViewDisposable,
+        revealFileFromViewDisposable
+    );
 }
 
-// ÜBERARBEITET: deactivate sorgt dafür, dass das Panel geschlossen wird, wenn die Erweiterung deaktiviert wird.
 export function deactivate() {
     if (lfsLocksPanel) {
         lfsLocksPanel.dispose();

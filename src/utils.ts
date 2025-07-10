@@ -1,5 +1,6 @@
 // src/utils.ts
 import * as path from 'path';
+import * as vscode from 'vscode';
 
 /**
  * Gibt den letzten Teil eines Pfades zurück, der der Dateiname oder der letzte Ordnername ist.
@@ -11,7 +12,6 @@ import * as path from 'path';
 export function getBasename(filePath: string): string {
     return path.basename(filePath);
 }
-
 
 /**
  * Berechnet den relativen Pfad eines Dateipfads zum Workspace-Pfad.
@@ -37,6 +37,53 @@ export function getRelativePath(workspacePath: string, filePath: string): string
     return gitFriendlyPath;
 }
 
+/**
+ * Retrieves the file system path of the current workspace.
+ * @param uri - Optional URI to determine the workspace folder.
+ * @returns The workspace path as a string, or undefined if not found.
+ */
+export function getWorkspacePath(uri?: vscode.Uri): string | undefined {
+    if (uri) {
+        const workspaceFolder = vscode.workspace.getWorkspaceFolder(uri);
+        if (workspaceFolder) {
+            return workspaceFolder.uri.fsPath;
+        }
+    }
+    // Fallback if no URI or not in a workspace folder (less ideal)
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        return vscode.workspace.workspaceFolders[0].uri.fsPath;
+    }
+    return undefined;
+}
+
+/**
+ * Generates a random nonce string.
+ * @returns A 32-character random string.
+ */
+export function getNonce() {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    for (let i = 0; i < 32; i++) {
+        text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    return text;
+}
+
+/**
+ * Gets the URI for a command, either from the provided URI or the active text editor.
+ * @param uri - The URI passed to the command.
+ * @returns The determined URI, or undefined if none can be found.
+ */
+export function getUriForCommand(uri: vscode.Uri | undefined): vscode.Uri | undefined {
+    if (uri && uri.fsPath) {
+        return uri;
+    }
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+        return activeEditor.document.uri;
+    }
+    return undefined;
+}
 
 /**
  * Kombiniert einen Workspace-Pfad mit einem relativen Pfad.

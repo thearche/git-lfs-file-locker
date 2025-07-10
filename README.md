@@ -6,23 +6,25 @@ A Visual Studio Code extension to manage Git LFS file locks directly from the ed
 
 - **Lock/Unlock Files:**
   - Adds context menu items to lock or unlock files tracked by Git LFS.
-- **Active Locks Overview:**
-  - Command `Git LFS: Show Active Locks` opens a webview listing all current LFS locks in the repository.
-  - Table view includes: Lock ID, File Path (clickable to reveal in Explorer), Locked By, Locked At, and Unlock action.
-- **Unlock Directly from Webview:**
-  - Unlock files with one click from the lock overview.
-- **Reveal File in Explorer:**
-  - Click on a file path in the webview to reveal it in the VS Code Explorer.
+- **Intelligent AL File Locking:**
+  - When locking/unlocking a `.al` file, the extension automatically finds the corresponding layout file (e.g., `.docx`) and applies the lock to it.
+- **Native Tree View for Active Locks:**
+  - A native tree view in the Activity Bar lists all current LFS locks for a clean and integrated experience.
+  - Provides context menu actions to unlock or reveal files directly from the view.
+- **Detailed Lock Overview in Editor:**
+  - A command in the tree view's title bar opens a detailed table view of all locks in a separate editor tab.
+  - From the table, you can unlock files or reveal them in the Explorer.
 - **Auto-Refresh:**
-  - The webview automatically refreshes when it becomes visible and provides a manual refresh button.
+  - The lock views automatically refresh and provide a manual refresh button.
 
 ## Usage
 
 1. **Lock/Unlock a File:**
    - Right-click a file in the Explorer and select `Git LFS: Lock File` or `Git LFS: Unlock File`.
-2. **Show Active Locks:**
-   - Open the Command Palette (`Ctrl+Shift+P`), search for `Git LFS: Show Active Locks`.
-   - Use the webview to inspect, unlock, or reveal locked files.
+2. **View Active Locks:**
+   - Open the "Git LFS" view in the Activity Bar.
+   - Use the context menu on a locked file to unlock or reveal it.
+   - Click the "Show Active Locks in Editor" icon in the view's title bar for a more detailed table.
 
 ## Requirements
 - [Git LFS](https://git-lfs.github.com/) must be installed and initialized in your repository.

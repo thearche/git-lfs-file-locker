@@ -2,7 +2,7 @@
   "name": "git-lfs-file-locker",
   "displayName": "Git LFS File Locker",
   "description": "Adds a context menu item to lock/unlock files with Git LFS.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "TheArche",
   "icon": "icon.png",
   "readme": "This extension adds a context menu item to lock/unlock files with Git LFS.",
@@ -21,15 +21,37 @@
     "commands": [
       {
         "command": "git-lfs-file-locker.lockFile",
-        "title": "Git LFS: Lock File"
+        "title": "Git LFS: Lock File",
+        "category": "Git LFS"
       },
       {
         "command": "git-lfs-file-locker.unlockFile",
-        "title": "Git LFS: Unlock File"
+        "title": "Git LFS: Unlock File",
+        "category": "Git LFS"
       },
       {
         "command": "git-lfs-file-locker.showLocks",
-        "title": "Git LFS: Show Active Locks"
+        "title": "Git LFS: Show Active Locks in Editor",
+        "category": "Git LFS",
+        "icon": "$(lock)"
+      },
+      {
+        "command": "git-lfs-file-locker.refreshLocks",
+        "title": "Refresh",
+        "category": "Git LFS",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "git-lfs-file-locker.unlockFileFromView",
+        "title": "Unlock",
+        "category": "Git LFS",
+        "icon": "$(unlock)"
+      },
+      {
+        "command": "git-lfs-file-locker.revealFileFromView",
+        "title": "Reveal in Explorer",
+        "category": "Git LFS",
+        "icon": "$(go-to-file)"
       }
     ],
     "menus": {
@@ -43,6 +65,49 @@
           "when": "resourceScheme == 'file'",
           "command": "git-lfs-file-locker.unlockFile",
           "group": "9_git@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "git-lfs-file-locker.refreshLocks",
+          "when": "view == gitLfsLocksView",
+          "group": "navigation"
+        },
+        {
+            "command": "git-lfs-file-locker.showLocks",
+            "when": "view == gitLfsLocksView",
+            "group": "navigation@1"
+        }
+      ],
+      "view/item/context": [
+        {
+            "command": "git-lfs-file-locker.unlockFileFromView",
+            "when": "view == gitLfsLocksView && viewItem == lfsLock",
+            "group": "inline"
+        },
+        {
+            "command": "git-lfs-file-locker.revealFileFromView",
+            "when": "view == gitLfsLocksView && viewItem == lfsLock",
+            "group": "inline"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "git-lfs-locks-container",
+          "title": "Git LFS",
+          "icon": "$(lock)"
+        }
+      ]
+    },
+    "views": {
+      "git-lfs-locks-container": [
+        {
+          "id": "gitLfsLocksView",
+          "name": "Active Locks",
+          "type": "tree",
+          "icon": "$(lock)"
         }
       ]
     }

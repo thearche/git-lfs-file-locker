@@ -1,0 +1,40 @@
+body { 
+    font-family: var(--vscode-font-family); 
+    color: var(--vscode-foreground); 
+    background-color: var(--vscode-editor-background); 
+}
+table { 
+    width: 100%; 
+    border-collapse: collapse; 
+}
+th, td { 
+    text-align: left; 
+    padding: 8px; 
+    border-bottom: 1px solid var(--vscode-editor-widget-border); 
+}
+th { 
+    background-color: var(--vscode-side-bar-background); 
+}
+button { 
+    background-color: var(--vscode-button-background); 
+    color: var(--vscode-button-foreground); 
+    border: none; 
+    padding: 5px 10px; 
+    cursor: pointer; 
+    border-radius: 2px; 
+}
+button:hover { 
+    background-color: var(--vscode-button-hoverBackground); 
+}
+.actions-header { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+}
+a { 
+    color: var(--vscode-textLink-foreground); 
+    cursor: pointer; 
+}
+a:hover { 
+    text-decoration: underline; 
+}

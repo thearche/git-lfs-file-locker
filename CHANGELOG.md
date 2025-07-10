@@ -6,6 +6,22 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.4.0] - 2025-07-10
+
+### Hinzugefügt (Added)
+
+- **Intelligentes Sperren für AL-Dateien:** Beim Versuch, eine `.al`-Datei zu sperren oder zu entsperren, findet die Erweiterung nun automatisch die zugehörige Layout-Datei (z.B. `.docx`) und führt die Aktion auf diese aus.
+
+### Geändert (Changed)
+
+- **Native Tree View:** Die bisherige Webview in der Aktivitätsleiste wurde durch eine native VS Code Tree View ersetzt. Diese listet alle gesperrten Dateien übersichtlich auf und bietet eine bessere Performance und ein konsistenteres UI-Erlebnis.
+- **Detaillierte Ansicht im Editor:** Die ursprüngliche, detaillierte Tabellenansicht der Locks wird nun über einen Befehl in der Titelleiste der Tree View in einem eigenen Editor-Tab geöffnet.
+- **Code-Refactoring:** Interne Hilfsfunktionen wurden in eine separate `utils.ts`-Datei ausgelagert, um die Codebasis sauberer und wartbarer zu machen.
+
+### Behoben (Fixed)
+
+- **Pfadauflösung für AL-Layouts:** Ein Fehler wurde behoben, bei dem der Pfad zur Layout-Datei relativ zur `.al`-Datei statt zum Workspace-Root aufgelöst wurde.
+
 ## [0.3.0] - 2025-06-25
 
 ### Hinzugefügt (Added)
