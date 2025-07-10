@@ -17,6 +17,7 @@
     "SCM Providers"
   ],
   "main": "./out/extension.js",
+  "activationEvents": [],
   "contributes": {
     "commands": [
       {
