@@ -41,7 +41,9 @@ async function executeLfsCommand(command: string, fileUri: vscode.Uri) {
                     vscode.window.showErrorMessage(`Could not determine workspace root for '${getBasename(originalFilePath)}'.`);
                     return;
                 }
-                const docxFilePath = path.resolve(workspaceRoot, layoutPath);
+                // Ensure the layout path is resolved relative to the workspace root
+                const normalizedLayoutPath = layoutPath.startsWith('./') ? layoutPath.substring(2) : layoutPath;
+                const docxFilePath = path.resolve(workspaceRoot, normalizedLayoutPath);
                 const docxFileUri = vscode.Uri.file(docxFilePath);
 
                 try {
@@ -271,6 +273,12 @@ export function activate(context: vscode.ExtensionContext) {
                 localResourceRoots: [context.extensionUri]
             }
         );
+
+        panel.iconPath = {
+            light: vscode.Uri.joinPath(context.extensionUri, 'icon.png'),
+            dark: vscode.Uri.joinPath(context.extensionUri, 'icon.png')
+        };
+        
         lfsLocksPanel = panel;
 
         panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);

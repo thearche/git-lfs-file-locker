@@ -6,6 +6,16 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.5.0] - 2025-08-07
+
+### Hinzugefügt (Added)
+
+- **Icon im Webview:** Die Webview für aktive Git LFS Locks zeigt nun ein Icon in der Titelleiste an.
+
+### Behoben (Fixed)
+
+- **Bugfix bei AL-Dateien im Workspace:** Verbesserte Behandlung von AL-Dateien und deren Layout-Pfaden im Workspace-Kontext.
+
 ## [0.4.0] - 2025-07-10
 
 ### Hinzugefügt (Added)
