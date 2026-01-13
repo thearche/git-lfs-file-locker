@@ -6,6 +6,19 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.6.1] - 2026-01-13
+
+### Geändert (Changed)
+
+- **.vscodeignore ergänzt:** TypeScript-Dateien und tsconfig werden aus dem VSIX-Paket ausgeschlossen.
+
+## [0.6.0] - 2026-01-13
+
+### Hinzugefügt (Added)
+
+- **Gruppierte Tree View mit Datum:** Die LFS-Locks in der Seitenleiste werden nun nach Zeiträumen (Today, This Week, This Month, Older) gruppiert und lassen sich einklappen.
+- **Datumsanzeige in Einträgen:** Jedes Lock zeigt jetzt Datum und Uhrzeit direkt in der Beschreibung der Tree-Items.
+
 ## [0.5.0] - 2025-08-07
 
 ### Hinzugefügt (Added)

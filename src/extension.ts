@@ -98,8 +98,11 @@ class LfsLockTreeItem extends vscode.TreeItem {
         public readonly lock: LfsLock
     ) {
         super(label, vscode.TreeItemCollapsibleState.None);
-        this.tooltip = `${lock.path}\nID: ${lock.id}\nLocked by: ${lock.owner.name}\nLocked at: ${new Date(lock.locked_at).toLocaleString()}`;
-        this.description = `by ${lock.owner.name} at ${new Date(lock.locked_at).toLocaleTimeString()}`;
+        const lockedDate = new Date(lock.locked_at);
+        const dateString = lockedDate.toLocaleDateString();
+        const timeString = lockedDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        this.tooltip = `${lock.path}\nID: ${lock.id}\nLocked by: ${lock.owner.name}\nLocked at: ${lockedDate.toLocaleString()}`;
+        this.description = `by ${lock.owner.name} on ${dateString} at ${timeString}`;
         this.iconPath = new vscode.ThemeIcon('lock');
         this.contextValue = 'lfsLock';
         this.command = {
@@ -110,21 +113,32 @@ class LfsLockTreeItem extends vscode.TreeItem {
     }
 }
 
-class LfsLocksTreeDataProvider implements vscode.TreeDataProvider<LfsLockTreeItem> {
-    private _onDidChangeTreeData: vscode.EventEmitter<LfsLockTreeItem | undefined | null | void> = new vscode.EventEmitter<LfsLockTreeItem | undefined | null | void>();
-    readonly onDidChangeTreeData: vscode.Event<LfsLockTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
+class GroupTreeItem extends vscode.TreeItem {
+    constructor(
+        public readonly label: string,
+        public readonly groupKey: string,
+        public readonly locks: LfsLock[]
+    ) {
+        super(label, vscode.TreeItemCollapsibleState.Expanded);
+        this.contextValue = 'lfsLockGroup';
+    }
+}
+
+class LfsLocksTreeDataProvider implements vscode.TreeDataProvider<LfsLockTreeItem | GroupTreeItem> {
+    private _onDidChangeTreeData: vscode.EventEmitter<LfsLockTreeItem | GroupTreeItem | undefined | null | void> = new vscode.EventEmitter<LfsLockTreeItem | GroupTreeItem | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<LfsLockTreeItem | GroupTreeItem | undefined | null | void> = this._onDidChangeTreeData.event;
 
     refresh(): void {
         this._onDidChangeTreeData.fire();
     }
 
-    getTreeItem(element: LfsLockTreeItem): vscode.TreeItem {
+    getTreeItem(element: LfsLockTreeItem | GroupTreeItem): vscode.TreeItem {
         return element;
     }
 
-    async getChildren(element?: LfsLockTreeItem): Promise<LfsLockTreeItem[]> {
-        if (element) {
-            return []; // No children for locks
+    async getChildren(element?: LfsLockTreeItem | GroupTreeItem): Promise<Array<LfsLockTreeItem | GroupTreeItem>> {
+        if (element instanceof GroupTreeItem) {
+            return element.locks.map(lock => new LfsLockTreeItem(path.basename(lock.path), lock));
         }
 
         const workspacePath = getWorkspacePath();
@@ -153,7 +167,8 @@ class LfsLocksTreeDataProvider implements vscode.TreeDataProvider<LfsLockTreeIte
                 return [item as LfsLockTreeItem];
             }
 
-            return locksList.map(lock => new LfsLockTreeItem(path.basename(lock.path), lock));
+            const grouped = groupLocksByDate(locksList);
+            return grouped.map(group => new GroupTreeItem(group.label, group.key, group.locks));
 
         } catch (error: any) {
             console.error("Failed to fetch LFS locks:", error);
@@ -163,6 +178,68 @@ class LfsLocksTreeDataProvider implements vscode.TreeDataProvider<LfsLockTreeIte
             return [item as LfsLockTreeItem];
         }
     }
+}
+
+type LockGroupKey = 'today' | 'thisWeek' | 'thisMonth' | 'older';
+
+function groupLocksByDate(locks: LfsLock[]): Array<{ key: LockGroupKey; label: string; locks: LfsLock[] }> {
+    const now = new Date();
+    const startOfToday = getStartOfDay(now);
+    const startOfWeek = getStartOfWeek(now);
+    const startOfMonth = getStartOfMonth(now);
+
+    const groups: Record<LockGroupKey, LfsLock[]> = {
+        today: [],
+        thisWeek: [],
+        thisMonth: [],
+        older: []
+    };
+
+    locks.forEach(lock => {
+        const lockedDate = new Date(lock.locked_at);
+        const lockStartOfDay = getStartOfDay(lockedDate);
+
+        if (lockStartOfDay >= startOfToday) {
+            groups.today.push(lock);
+            return;
+        }
+        if (lockedDate >= startOfWeek) {
+            groups.thisWeek.push(lock);
+            return;
+        }
+        if (lockedDate >= startOfMonth) {
+            groups.thisMonth.push(lock);
+            return;
+        }
+        groups.older.push(lock);
+    });
+
+    const ordered: Array<{ key: LockGroupKey; label: string; locks: LfsLock[] }> = [
+        { key: 'today', label: 'Today', locks: groups.today },
+        { key: 'thisWeek', label: 'This Week', locks: groups.thisWeek },
+        { key: 'thisMonth', label: 'This Month', locks: groups.thisMonth },
+        { key: 'older', label: 'Older', locks: groups.older }
+    ];
+
+    // Only return groups that have at least one lock
+    return ordered.filter(group => group.locks.length > 0);
+}
+
+function getStartOfDay(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getStartOfWeek(date: Date): Date {
+    const day = date.getDay();
+    const diff = (day === 0 ? -6 : 1) - day; // Monday as first day of week
+    const start = new Date(date);
+    start.setHours(0, 0, 0, 0);
+    start.setDate(date.getDate() + diff);
+    return start;
+}
+
+function getStartOfMonth(date: Date): Date {
+    return new Date(date.getFullYear(), date.getMonth(), 1);
 }
 
 async function fetchLocksAndUpdateWebview(webview: vscode.Webview) {
