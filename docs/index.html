@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="de" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git LFS File Locker - VS Code Extension</title>
+    <meta name="description" content="Einfaches Sperren und Entsperren von Git LFS Dateien direkt in VS Code.">
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS (CDN for instant usage without build step) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        gray: {
+                            900: '#0f172a', // Slate 900
+                            800: '#1e293b', // Slate 800
+                            700: '#334155', // Slate 700
+                            400: '#94a3b8', // Slate 400
+                            300: '#cbd5e1', // Slate 300
+                        },
+                        accent: {
+                            DEFAULT: '#6366f1', // Indigo 500
+                            hover: '#4f46e5',   // Indigo 600
+                            glow: 'rgba(99, 102, 241, 0.5)'
+                        }
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 1s ease-out',
+                        'float': 'float 6s ease-in-out infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(10px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        float: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-10px)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom scrollbar for a super clean look */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569; 
+        }
+        
+        body {
+            background-color: #0f172a;
+            color: #cbd5e1;
+        }
+
+        /* Subtle glow effect behind the main image */
+        .glow-bg {
+            position: absolute;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(15, 23, 42, 0) 70%);
+            border-radius: 50%;
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="antialiased selection:bg-accent selection:text-white">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 bg-gray-900/80 backdrop-blur-md border-b border-gray-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-2">
+                    <!-- Icon: Lock -->
+                    <svg class="h-6 w-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                    <span class="font-bold text-lg text-white tracking-tight">Git LFS Locker</span>
+                </div>
+                <div class="hidden md:block">
+                    <div class="ml-10 flex items-baseline space-x-8">
+                        <a href="#features" class="hover:text-white transition-colors px-3 py-2 rounded-md text-sm font-medium">Features</a>
+                        <a href="#howto" class="hover:text-white transition-colors px-3 py-2 rounded-md text-sm font-medium">Anleitung</a>
+                        <a href="https://github.com/thearche/git-lfs-file-locker" target="_blank" class="hover:text-white transition-colors px-3 py-2 rounded-md text-sm font-medium">GitHub</a>
+                    </div>
+                </div>
+                <div>
+                    <a href="https://marketplace.visualstudio.com/items?itemName=thearche.git-lfs-file-locker" target="_blank" class="bg-white text-gray-900 hover:bg-gray-200 px-4 py-2 rounded-md text-sm font-semibold transition-colors">
+                        Download
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <div class="relative pt-32 pb-20 sm:pt-40 sm:pb-24 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            
+            <div class="glow-bg top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+
+            <h1 class="text-4xl sm:text-6xl font-extrabold text-white tracking-tight mb-6 animate-fade-in">
+                Behalte die Kontrolle über <br>
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">Git LFS Dateien</span>
+            </h1>
+            
+            <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-400 mb-10 animate-fade-in" style="animation-delay: 0.1s;">
+                Die fehlende Kontextmenü-Erweiterung für Visual Studio Code. Sperre und entsperre Large File Storage Assets direkt aus deinem Explorer.
+            </p>
+            
+            <div class="flex flex-col sm:flex-row justify-center gap-4 animate-fade-in" style="animation-delay: 0.2s;">
+                <a href="https://marketplace.visualstudio.com/items?itemName=thearche.git-lfs-file-locker" target="_blank" class="flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover text-white px-8 py-3 rounded-lg text-lg font-medium transition-all hover:scale-105 shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                    <span>Im Marketplace installieren</span>
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </a>
+                <a href="https://github.com/thearche/git-lfs-file-locker" target="_blank" class="flex items-center justify-center gap-2 bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg text-lg font-medium transition-all border border-gray-700">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                    <span>Repository</span>
+                </a>
+            </div>
+
+            <!-- VS Code Mockup Window -->
+            <div class="mt-16 mx-auto max-w-4xl animate-float">
+                <div class="bg-gray-800 rounded-lg shadow-2xl border border-gray-700 overflow-hidden">
+                    <!-- Window Header -->
+                    <div class="bg-gray-900 px-4 py-2 flex items-center gap-2 border-b border-gray-800">
+                        <div class="w-3 h-3 rounded-full bg-red-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-yellow-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                        <div class="ml-4 text-xs text-gray-500 font-mono">explorer — visual studio code</div>
+                    </div>
+                    <!-- Window Content (Simulated UI) -->
+                    <div class="grid grid-cols-4 h-64 sm:h-80 text-left font-mono text-sm">
+                        <!-- Sidebar -->
+                        <div class="col-span-1 bg-gray-900 border-r border-gray-800 p-4 hidden sm:block">
+                            <div class="text-xs text-gray-500 uppercase mb-2">Explorer</div>
+                            <div class="text-gray-300 pl-2 py-1 bg-gray-800 rounded flex items-center gap-2">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" /></svg>
+                                assets
+                            </div>
+                            <div class="text-gray-400 pl-6 py-1 hover:text-white cursor-pointer relative group">
+                                large_model.fbx
+                                <!-- Context Menu Simulation -->
+                                <div class="absolute left-full top-0 ml-[-20px] w-48 bg-gray-800 border border-gray-700 shadow-xl rounded py-1 z-10">
+                                    <div class="px-4 py-1.5 text-gray-400 hover:bg-accent hover:text-white cursor-pointer">Cut</div>
+                                    <div class="px-4 py-1.5 text-gray-400 hover:bg-accent hover:text-white cursor-pointer">Copy</div>
+                                    <div class="h-px bg-gray-700 my-1"></div>
+                                    <div class="px-4 py-1.5 text-white bg-indigo-500/20 cursor-pointer flex items-center justify-between">
+                                        <span>Git LFS: Lock</span>
+                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>
+                                    </div>
+                                    <div class="px-4 py-1.5 text-gray-400 hover:bg-accent hover:text-white cursor-pointer">Git LFS: Unlock</div>
+                                </div>
+                            </div>
+                            <div class="text-gray-400 pl-6 py-1">texture_01.png</div>
+                        </div>
+                        <!-- Main Area -->
+                        <div class="col-span-4 sm:col-span-3 bg-gray-900 p-6 flex flex-col justify-center items-center text-gray-500">
+                            <svg class="w-16 h-16 mb-4 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            <p>Wähle eine Datei im Explorer, um sie zu sperren.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section id="features" class="py-20 bg-gray-900 border-t border-gray-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-3xl font-bold text-white">Funktionen</h2>
+                <p class="mt-4 text-gray-400">Alles, was du brauchst, ohne das Terminal öffnen zu müssen.</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <!-- Feature 1 -->
+                <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 hover:border-accent/50 transition-colors group">
+                    <div class="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center mb-6 group-hover:bg-accent group-hover:text-white transition-colors text-accent">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Rechtsklick Kontext</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        Integrierte Befehle direkt im VS Code Datei-Explorer. Kein Wechseln zur Kommandozeile mehr nötig.
+                    </p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 hover:border-accent/50 transition-colors group">
+                    <div class="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center mb-6 group-hover:bg-accent group-hover:text-white transition-colors text-accent">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Lock & Unlock</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        Sperre binäre Dateien, um Konflikte im Team zu vermeiden, und gib sie wieder frei, wenn du fertig bist.
+                    </p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="bg-gray-800 p-8 rounded-xl border border-gray-700 hover:border-accent/50 transition-colors group">
+                    <div class="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center mb-6 group-hover:bg-accent group-hover:text-white transition-colors text-accent">
+                        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-semibold text-white mb-3">Force Unlock</h3>
+                    <p class="text-gray-400 leading-relaxed">
+                        Für den Notfall: Erzwinge das Entsperren von Dateien (Force), falls ein Prozess hängen geblieben ist.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it works / Requirements -->
+    <section id="howto" class="py-20 bg-gray-900 border-t border-gray-800">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-2xl font-bold text-white mb-8">Voraussetzungen</h2>
+            <div class="bg-gray-800 rounded-lg p-6 border-l-4 border-accent">
+                <p class="text-gray-300">
+                    Stelle sicher, dass <code class="bg-gray-900 text-accent px-2 py-1 rounded font-mono text-sm">git</code> und <code class="bg-gray-900 text-accent px-2 py-1 rounded font-mono text-sm">git-lfs</code> auf deinem System installiert sind und sich im PATH befinden.
+                </p>
+            </div>
+            
+            <div class="mt-12">
+                <h3 class="text-xl font-semibold text-white mb-4">Nutzung</h3>
+                <ul class="space-y-4 text-gray-400">
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-bold">1</span>
+                        <span>Rechtsklick auf eine Datei im VS Code Explorer.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-bold">2</span>
+                        <span>Wähle <strong>Git LFS: Lock</strong> um die Datei zu sperren.</span>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-700 text-white flex items-center justify-center text-sm font-bold">3</span>
+                        <span>Beobachte die Benachrichtigung unten rechts für den Erfolgsstatus.</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-900 border-t border-gray-800 py-12">
+        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div class="text-gray-500 text-sm">
+                &copy; <span id="year"></span> thearche. Open Source (MIT).
+            </div>
+            <div class="flex space-x-6">
+                <a href="https://github.com/thearche/git-lfs-file-locker/issues" class="text-gray-500 hover:text-white transition-colors text-sm">Support / Issues</a>
+                <a href="https://marketplace.visualstudio.com/items?itemName=thearche.git-lfs-file-locker" class="text-gray-500 hover:text-white transition-colors text-sm">Marketplace</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+    </script>
+</body>
+</html>
