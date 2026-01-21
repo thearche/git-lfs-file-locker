@@ -6,6 +6,14 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.6.2] - 2026-01-21
+
+### Hinzugefügt (Added)
+
+- **Homepage hinzugefügt:** `homepage`-Feld in der `package.json` auf `https://github.thearche.de/` gesetzt.
+
+---
+
 ## [0.6.1] - 2026-01-13
 
 ### Geändert (Changed)
