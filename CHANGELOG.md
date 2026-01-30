@@ -6,6 +6,25 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.6.3] - 2026-01-31
+
+### Hinzugefügt (Added)
+
+- **package.json:** Mehr Informationen zu der Erweiterung hinzugefügt:
+  - activationEvents
+  - categories
+  - tags
+  - license
+  - galleryBanner
+
+### Geändert (Changed)
+
+- **Dependencies:** Abhängigkeiten auf den neusten Stand aktualisiert.
+
+- **.vscodeignore angepasst:** Weitere Dateien aus dem VSIX-Paket ausgeschlossen.
+
+---
+
 ## [0.6.2] - 2026-01-21
 
 ### Hinzugefügt (Added)

@@ -2,23 +2,38 @@
   "name": "git-lfs-file-locker",
   "displayName": "Git LFS File Locker",
   "description": "Adds a context menu item to lock/unlock files with Git LFS.",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "publisher": "TheArche",
   "icon": "icon.png",
+  "galleryBanner": {
+    "color": "#6C88C4",
+    "theme": "dark"
+  },
   "readme": "This extension adds a context menu item to lock/unlock files with Git LFS.",
   "homepage": "https://github.thearche.de/",
+  "license": "ISC",
   "repository": {
     "type": "git",
     "url": "https://github.com/thearche/git-lfs-file-locker"
   },
   "engines": {
-    "vscode": "^1.80.0"
+    "vscode": "^1.108.1"
   },
   "categories": [
-    "SCM Providers"
+    "SCM Providers",
+    "Other"
+  ],
+  "tags": [
+    "git",
+    "git-lfs",
+    "lfs",
+    "file-locking"
   ],
   "main": "./out/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished",
+    "workspaceContains:.git/lfs/config"
+  ],
   "contributes": {
     "commands": [
       {
@@ -76,21 +91,21 @@
           "group": "navigation"
         },
         {
-            "command": "git-lfs-file-locker.showLocks",
-            "when": "view == gitLfsLocksView",
-            "group": "navigation@1"
+          "command": "git-lfs-file-locker.showLocks",
+          "when": "view == gitLfsLocksView",
+          "group": "navigation@1"
         }
       ],
       "view/item/context": [
         {
-            "command": "git-lfs-file-locker.unlockFileFromView",
-            "when": "view == gitLfsLocksView && viewItem == lfsLock",
-            "group": "inline"
+          "command": "git-lfs-file-locker.unlockFileFromView",
+          "when": "view == gitLfsLocksView && viewItem == lfsLock",
+          "group": "inline"
         },
         {
-            "command": "git-lfs-file-locker.revealFileFromView",
-            "when": "view == gitLfsLocksView && viewItem == lfsLock",
-            "group": "inline"
+          "command": "git-lfs-file-locker.revealFileFromView",
+          "when": "view == gitLfsLocksView && viewItem == lfsLock",
+          "group": "inline"
         }
       ]
     },
@@ -121,11 +136,11 @@
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
-    "@types/vscode": "^1.80.0",
-    "@types/node": "18.x",
-    "typescript": "^5.0.0",
-    "@typescript-eslint/eslint-plugin": "^5.50.0",
-    "@typescript-eslint/parser": "^5.50.0",
-    "eslint": "^8.33.0"
+    "@types/vscode": "1.108.1",
+    "@types/node": "25.1.0",
+    "typescript": "5.9.3",
+    "@typescript-eslint/eslint-plugin": "8.54.0",
+    "@typescript-eslint/parser": "8.54.0",
+    "eslint": "9.39.2"
   }
 }
