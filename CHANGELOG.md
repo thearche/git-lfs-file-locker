@@ -6,6 +6,14 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.6.4] - 2026-04-05
+
+### Geändert (Changed)
+
+- **tags:** Is now keywords
+
+---
+
 ## [0.6.3] - 2026-01-31
 
 ### Hinzugefügt (Added)
