@@ -29,7 +29,7 @@ export async function fetchLocksAndUpdateWebview(webview: vscode.Webview, exec =
     }
 }
 
-export function showLocks(context: vscode.ExtensionContext, lfsLocksPanel: vscode.WebviewPanel | undefined = undefined, exec = promisify(cp.exec)) {
+export function showLocks(context: vscode.ExtensionContext, lfsLocksPanel: vscode.WebviewPanel | undefined = undefined, exec = promisify(cp.exec), lockManager?: any, executeLfsCommand?: any) {
     const column = vscode.window.activeTextEditor
         ? vscode.window.activeTextEditor.viewColumn
         : undefined;
@@ -60,6 +60,14 @@ export function showLocks(context: vscode.ExtensionContext, lfsLocksPanel: vscod
     panel.webview.html = getWebviewContent(panel.webview, context.extensionUri);
     fetchLocksAndUpdateWebview(panel.webview, exec);
 
+    // Listen to lock manager changes and refresh webview
+    if (lockManager) {
+        const lockChangeListener = lockManager.onDidChangeLocks(() => {
+            fetchLocksAndUpdateWebview(panel.webview, exec);
+        });
+        context.subscriptions.push(lockChangeListener);
+    }
+
     panel.onDidDispose(() => {
         lfsLocksPanel = undefined;
     }, null, context.subscriptions);
@@ -70,14 +78,8 @@ export function showLocks(context: vscode.ExtensionContext, lfsLocksPanel: vscod
 
         switch (message.command) {
             case 'unlockFile':
-                try {
-                    await exec(`git lfs unlock --id=${message.lockId}`, { cwd: workspacePath });
-                    vscode.window.showInformationMessage(`Successfully unlocked file (ID: ${message.lockId}).`);
-                    if (lfsLocksPanel) {
-                        fetchLocksAndUpdateWebview(lfsLocksPanel.webview, exec);
-                    }
-                } catch (error: any) {
-                    vscode.window.showErrorMessage(`Failed to unlock file: ${error.message}`);
+                if (executeLfsCommand) {
+                    await executeLfsCommand('unlock', undefined, message.lockId, lockManager);
                 }
                 return;
 

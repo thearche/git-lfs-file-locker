@@ -24,8 +24,7 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showErrorMessage('No file selected or active to lock.');
             return;
         }
-        await executeLfsCommand('lock', fileUri);
-        await lockManager.refresh();
+        await executeLfsCommand('lock', fileUri, undefined, lockManager);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.unlockFile', async (uri: vscode.Uri) => {
@@ -34,12 +33,11 @@ export function activate(context: vscode.ExtensionContext) {
             vscode.window.showErrorMessage('No file selected or active to unlock.');
             return;
         }
-        await executeLfsCommand('unlock', fileUri);
-        await lockManager.refresh();
+        await executeLfsCommand('unlock', fileUri, undefined, lockManager);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.showLocks', (context) => {
-        showLocks(context, lfsLocksPanel, exec);
+        showLocks(context, lfsLocksPanel, exec, lockManager, executeLfsCommand);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.refreshLocks', () => {
@@ -50,18 +48,8 @@ export function activate(context: vscode.ExtensionContext) {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.unlockFileFromView', async (item: LfsLockTreeItem) => {
-        const workspacePath = getWorkspacePath();
-        if (!workspacePath || !item.lock) { return; }
-        try {
-            await exec(`git lfs unlock --id=${item.lock.id}`, { cwd: workspacePath });
-            vscode.window.showInformationMessage(`Successfully unlocked file: ${item.lock.path}`);
-            treeDataProvider.refresh();
-            if (lfsLocksPanel) {
-                fetchLocksAndUpdateWebview(lfsLocksPanel.webview);
-            }
-        } catch (error: any) {
-            vscode.window.showErrorMessage(`Failed to unlock file: ${error.message}`);
-        }
+        if (!item.lock) { return; }
+        await executeLfsCommand('unlock', undefined, item.lock.id, lockManager);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.revealFileFromView', async (item: LfsLockTreeItem) => {
@@ -92,12 +80,13 @@ export function deactivate() {
     }
 }
 
-async function executeLfsCommand(command: string, fileUri: vscode.Uri) {
+async function executeLfsCommand(command: string, fileUri?: vscode.Uri, lockId?: string, lockManager?: LockManager) {
     let effectiveFileUri = fileUri;
-    const originalFilePath = fileUri.fsPath;
+    const originalFilePath = fileUri?.fsPath;
 
     // If trying to lock or unlock a .al file, try to find the layout file and act on it instead.
-    if ((command === 'lock' || command === 'unlock') && originalFilePath.toLowerCase().endsWith('.al')) {
+    // Only applies when we have a fileUri (not when using lockId)
+    if (fileUri && (command === 'lock' || command === 'unlock') && originalFilePath?.toLowerCase().endsWith('.al')) {
         try {
             const alFileContent = await vscode.workspace.fs.readFile(fileUri);
             const contentStr = Buffer.from(alFileContent).toString('utf8');
@@ -138,8 +127,7 @@ async function executeLfsCommand(command: string, fileUri: vscode.Uri) {
         }
     }
 
-    const filePath = effectiveFileUri.fsPath;
-    const workspacePath = getWorkspacePath(effectiveFileUri);
+    const workspacePath = getWorkspacePath(effectiveFileUri || fileUri);
 
     if (!workspacePath) {
         vscode.window.showErrorMessage('File is not part of a workspace. Cannot determine Git LFS context.');
@@ -154,12 +142,43 @@ async function executeLfsCommand(command: string, fileUri: vscode.Uri) {
         return;
     }
 
-    const relativeFilePath = getRelativePath(workspacePath, filePath);
-    var terminal = vscode.window.activeTerminal;
-    if (!terminal) {
-        terminal = vscode.window.createTerminal({ name: "Git LFS", cwd: workspacePath });
+    // Execute the command and wait for completion
+    try {
+        let gitCommand: string;
+        let displayName: string;
+
+        if (lockId) {
+            // Unlock by lock ID (from tree view or webview)
+            gitCommand = `git lfs unlock --id=${lockId}`;
+            displayName = `lock ID ${lockId}`;
+        } else if (effectiveFileUri) {
+            // Lock/unlock by file path (from explorer)
+            const relativeFilePath = getRelativePath(workspacePath, effectiveFileUri.fsPath);
+            gitCommand = `git lfs ${command} "${relativeFilePath}"`;
+            displayName = getBasename(effectiveFileUri.fsPath);
+        } else {
+            vscode.window.showErrorMessage('No file or lock ID provided for Git LFS operation.');
+            return;
+        }
+
+        await exec(gitCommand, { cwd: workspacePath });
+
+        // Success: Show popup only
+        vscode.window.showInformationMessage(`✓ ${command.charAt(0).toUpperCase() + command.slice(1)}ed: ${displayName}`);
+
+        // Refresh lock state after successful operation
+        if (lockManager) {
+            await lockManager.refresh();
+        }
+
+    } catch (error: any) {
+        // Error: Show popup AND open terminal with error details
+        vscode.window.showErrorMessage(`✗ Failed to ${command}: ${error.message}`);
+
+        // Show terminal with the failed command for debugging
+        const terminal = vscode.window.activeTerminal || vscode.window.createTerminal({ name: "Git LFS", cwd: workspacePath });
+        terminal.show();
+        // Note: We don't re-execute the command, just show it for reference
+        terminal.sendText(`# Previous command failed: ${error.message}`);
     }
-    terminal.sendText(`git lfs ${command} "${relativeFilePath}"`);
-    terminal.show();
-    vscode.window.showInformationMessage(`Attempting to ${command} "${getBasename(filePath)}" with Git LFS... Check the 'Git LFS' terminal for output.`);
 }
