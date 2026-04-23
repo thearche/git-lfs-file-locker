@@ -6,6 +6,33 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.1] - 2026-04-22
+
+### Geändert (Changed)
+
+- **Lock/Unlock Logic:** Vereinheitlicht die Lock/Unlock-Logik über alle UI-Eingangspunkte (Explorer-Kontextmenü, Tree-View, Webview)
+- **Benutzerfeedback:** Konsistente Benutzeroberfläche mit Popups bei Erfolg und bedingtem Terminal bei Fehlern
+- **.AL-Datei-Unterstützung:** Intelligente .AL-Datei-Umleitung funktioniert jetzt in allen Unlock-Methoden
+
+### Behoben (Fixed)
+
+- **Inkonsistente Verhaltensweisen:** Lock- und Unlock-Operationen verhalten sich jetzt identisch unabhängig vom Auslöser
+- **Timing-Probleme:** Zustandsaktualisierungen warten jetzt auf den Abschluss der Git-Befehle
+- **Redundanter Code:** Mehrfach vorhandene Unlock-Logik wurde in eine einzige Funktion konsolidiert
+
+---
+
+## [0.7.0] - 2026-04-22
+
+### Hinzugefügt (Added)
+
+- **Git LFS Lock Management:** Implementierung der vollständigen Git LFS Lock-Verwaltung mit Decoration Provider und Webview-Integration
+- **Datei-Dekorationen:** Visuelle Anzeige von gesperrten Dateien im Explorer mit 🔒-Symbol
+- **Webview-Integration:** Detaillierte Ansicht aller aktiven Git LFS Locks in einem separaten Editor-Tab
+- **Tree View:** Native VS Code Tree View für Git LFS Locks in der Activity Bar mit Gruppierung nach Datum
+
+---
+
 ## [0.6.4] - 2026-04-05
 
 ### Geändert (Changed)
