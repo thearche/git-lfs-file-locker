@@ -2,3 +2,4 @@ src/
 .vscode/
 .gitignore
 tsconfig.json
+docs/
