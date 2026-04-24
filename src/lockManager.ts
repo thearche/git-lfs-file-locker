@@ -37,49 +37,38 @@ export class LockManager {
         }
     }
 
-    private normalizePath(p: string): string {
-        return path.normalize(p).toLowerCase();
-    }
-
     public async refresh(): Promise<void> {
         const workspaceFolders = vscode.workspace.workspaceFolders;
         if (!workspaceFolders) return;
+        const rootPath = workspaceFolders[0].uri.fsPath;
 
-        const newLockedPaths = new Set<string>();
-        const newLocksDetails = new Map<string, LfsLock>();
+        try {
+            const { stdout } = await execAsync('git lfs locks --json', { cwd: rootPath });
+            const parsed = JSON.parse(stdout);
+            const locks: LfsLock[] = Array.isArray(parsed) ? parsed : parsed.locks || [];
 
-        for (const folder of workspaceFolders) {
-            const rootPath = folder.uri.fsPath;
-            try {
-                const { stdout } = await execAsync('git lfs locks --json', { cwd: rootPath });
-                if (!stdout) continue;
+            this.lockedFilePaths.clear();
+            this.locksDetails.clear();
 
-                const parsed = JSON.parse(stdout);
-                const locks: LfsLock[] = Array.isArray(parsed) ? parsed : (parsed.locks || []);
+            locks.forEach(lock => {
+                const absolutePath = path.normalize(path.join(rootPath, lock.path));
+                this.lockedFilePaths.add(absolutePath);
+                this.locksDetails.set(absolutePath, lock);
+            });
 
-                locks.forEach(lock => {
-                    const absolutePath = path.join(rootPath, lock.path);
-                    const normalized = this.normalizePath(absolutePath);
-                    
-                    newLockedPaths.add(normalized);
-                    newLocksDetails.set(normalized, lock);
-                });
-            } catch (error) {
-                console.warn(`LFS Locks konnten für ${rootPath} nicht geladen werden:`, error);
-            }
+            this._onDidChangeLocks.fire();
+
+        } catch (error) {
+            console.error('Fehler beim Laden der LFS Locks:', error);
         }
-
-        this.lockedFilePaths = newLockedPaths;
-        this.locksDetails = newLocksDetails;
-        this._onDidChangeLocks.fire();
     }
 
     public isLocked(filePath: string): boolean {
-        return this.lockedFilePaths.has(this.normalizePath(filePath));
+        return this.lockedFilePaths.has(path.normalize(filePath));
     }
 
     public getLockDetails(filePath: string): LfsLock | undefined {
-        return this.locksDetails.get(this.normalizePath(filePath));
+        return this.locksDetails.get(path.normalize(filePath));
     }
 
     public getAllLocks(): LfsLock[] {
