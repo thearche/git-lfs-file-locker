@@ -6,6 +6,14 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.3] - 2026-04-24
+
+### Behoben (Fixed)
+
+- **package.json:** Enthält nun zusätzlichen Sourcecode in der VSIX Package Datei
+
+---
+
 ## [0.7.2] - 2026-04-24
 
 ### Hinzugefügt (Added)

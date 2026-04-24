@@ -2,7 +2,7 @@
   "name": "git-lfs-file-locker",
   "displayName": "Git LFS File Locker",
   "description": "Adds a context menu item to lock/unlock files with Git LFS.",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "publisher": "TheArche",
   "icon": "icon.png",
   "galleryBanner": {

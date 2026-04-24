@@ -1,4 +1,6 @@
 src/
+!src/main.js
+!src/style.css
 .vscode/
 .gitignore
 tsconfig.json
