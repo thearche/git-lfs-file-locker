@@ -5,7 +5,7 @@ import vscode from 'vscode';
 import { GitLfsDecorationProvider } from './decorationProvider';
 import { LockManager } from './lockManager';
 import { LfsLocksTreeDataProvider, LfsLockTreeItem } from './treeDataProvider';
-import { getBasename, getRelativePath, getUriForCommand, getWorkspacePath } from './utils';
+import { combinePaths, getBasename, getRelativePath, getUriForCommand, getWorkspacePath } from './utils';
 import { fetchLocksAndUpdateWebview, showLocks } from './webView';
 
 const exec = promisify(cp.exec);
@@ -59,7 +59,7 @@ export function activate(context: vscode.ExtensionContext) {
         try {
             const { stdout: gitRepoPath } = await exec('git rev-parse --show-toplevel', { cwd: workspacePath });
             const repoRoot = gitRepoPath.trim();
-            const absoluteFilePath = path.join(repoRoot, item.lock.path);
+            const absoluteFilePath = combinePaths(repoRoot, item.lock.path);
             const fileUri = vscode.Uri.file(absoluteFilePath);
             await vscode.commands.executeCommand('revealInExplorer', fileUri);
             await vscode.commands.executeCommand('vscode.open', fileUri);

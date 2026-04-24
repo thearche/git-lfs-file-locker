@@ -6,6 +6,22 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.5] - 2026-04-24
+
+### Behoben (Fixed)
+
+- **absolutePath** nun auch wirklich korrekt aufgelöst
+
+---
+
+## [0.7.4] - 2026-04-24
+
+### Behoben (Fixed)
+
+- **lockmanager.ts:** Unterstützt nun auch Multi Root Workspaces
+
+---
+
 ## [0.7.3] - 2026-04-24
 
 ### Behoben (Fixed)

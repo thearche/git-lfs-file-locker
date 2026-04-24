@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { combinePaths } from './utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 
@@ -51,7 +52,7 @@ export class LockManager {
             this.locksDetails.clear();
 
             locks.forEach(lock => {
-                const absolutePath = path.normalize(path.join(rootPath, lock.path));
+                const absolutePath = combinePaths(rootPath, lock.path);
                 this.lockedFilePaths.add(absolutePath);
                 this.locksDetails.set(absolutePath, lock);
             });

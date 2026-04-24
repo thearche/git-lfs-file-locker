@@ -2,7 +2,7 @@ import vscode from 'vscode';
 import cp from 'child_process';
 import path from 'path';
 import { promisify } from 'util';
-import { getWorkspacePath, getNonce } from './utils';
+import { getWorkspacePath, getNonce, combinePaths } from './utils';
 import { LfsLock } from './lockManager';
 
 export async function fetchLocksAndUpdateWebview(webview: vscode.Webview, exec = promisify(cp.exec)) {
@@ -87,7 +87,7 @@ export function showLocks(context: vscode.ExtensionContext, lfsLocksPanel: vscod
                 try {
                     const { stdout: gitRepoPath } = await exec('git rev-parse --show-toplevel', { cwd: workspacePath });
                     const repoRoot = gitRepoPath.trim();
-                    const absoluteFilePath = path.join(repoRoot, message.path);
+                    const absoluteFilePath = combinePaths(repoRoot, message.path);
                     const fileUri = vscode.Uri.file(absoluteFilePath);
                     vscode.commands.executeCommand('revealInExplorer', fileUri);
                 } catch (error: any) {
