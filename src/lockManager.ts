@@ -17,9 +17,24 @@ export class LockManager {
     private locksDetails: Map<string, LfsLock> = new Map();
     private _onDidChangeLocks = new vscode.EventEmitter<void>();
     readonly onDidChangeLocks = this._onDidChangeLocks.event;
+    private refreshInterval: NodeJS.Timeout | undefined;
 
     constructor() {
         this.refresh();
+        this.startAutoRefresh();
+    }
+
+    private startAutoRefresh(): void {
+        // Refresh every 5 minutes
+        this.refreshInterval = setInterval(() => {
+            this.refresh();
+        }, 5 * 60 * 1000);
+    }
+
+    public dispose(): void {
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+        }
     }
 
     public async refresh(): Promise<void> {
@@ -29,7 +44,8 @@ export class LockManager {
 
         try {
             const { stdout } = await execAsync('git lfs locks --json', { cwd: rootPath });
-            const locks: LfsLock[] = JSON.parse(stdout);
+            const parsed = JSON.parse(stdout);
+            const locks: LfsLock[] = Array.isArray(parsed) ? parsed : parsed.locks || [];
 
             this.lockedFilePaths.clear();
             this.locksDetails.clear();

@@ -8,11 +8,12 @@ import { LfsLocksTreeDataProvider, LfsLockTreeItem } from './treeDataProvider';
 import { getBasename, getRelativePath, getUriForCommand, getWorkspacePath } from './utils';
 import { fetchLocksAndUpdateWebview, showLocks } from './webView';
 
-const exec = promisify(cp.exec); // Holds a reference to the currently open panel
+const exec = promisify(cp.exec);
 let lfsLocksPanel: vscode.WebviewPanel | undefined = undefined;
 
 export function activate(context: vscode.ExtensionContext) {
     const lockManager = new LockManager();
+    context.subscriptions.push(lockManager);
     const decorationProvider = new GitLfsDecorationProvider(lockManager);
     context.subscriptions.push(vscode.window.registerFileDecorationProvider(decorationProvider));
     const treeDataProvider = new LfsLocksTreeDataProvider(lockManager);
@@ -36,7 +37,7 @@ export function activate(context: vscode.ExtensionContext) {
         await executeLfsCommand('unlock', fileUri, undefined, lockManager);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.showLocks', (context) => {
+    context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.showLocks', () => {
         showLocks(context, lfsLocksPanel, exec, lockManager, executeLfsCommand);
     }));
 
@@ -71,6 +72,18 @@ export function activate(context: vscode.ExtensionContext) {
         if (state.focused) {
             lockManager.refresh();
         }
+    }));
+
+    // Refresh locks when switching between files
+    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editor => {
+        if (editor) {
+            lockManager.refresh();
+        }
+    }));
+
+    // Refresh locks when workspace folders change
+    context.subscriptions.push(vscode.workspace.onDidChangeWorkspaceFolders(() => {
+        lockManager.refresh();
     }));
 }
 

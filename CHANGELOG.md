@@ -6,6 +6,23 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.2] - 2026-04-24
+
+### Hinzugefügt (Added)
+
+- **Automatische Aktualisierung der Sperrliste:** Die Sperrliste wird nun automatisch aktualisiert, wenn:
+  - das VS Code-Fenster den Fokus erhält
+  - der aktive Texteditor wechselt
+  - Arbeitsbereichsordner hinzugefügt oder entfernt werden
+  - ein Hintergrund-Intervall (alle 5 Minuten) abläuft, um Änderungen von anderen Benutzern zu erfassen
+
+### Behoben (Fixed)
+
+- **Webview Context:** Behebt einen Fehler, bei dem `extensionUri` in der Webview aufgrund eines falschen Kontexts undefiniert war
+- **Extension Entrypoint:** Korrigiert den `main`-Eintrag in `package.json` von `./out/extension.js` zu `./out/main.js`, um sicherzustellen, dass die neueste kompilierte Erweiterung geladen wird
+
+---
+
 ## [0.7.1] - 2026-04-22
 
 ### Geändert (Changed)
