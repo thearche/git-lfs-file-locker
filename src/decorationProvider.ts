@@ -19,7 +19,7 @@ export class GitLfsDecorationProvider implements vscode.FileDecorationProvider {
 
             return {
                 badge: '🔒', 
-                tooltip: `Gesperrt durch Git LFS (${owner})`,
+                tooltip: `Git LFS (${owner})`,
                 color: new vscode.ThemeColor('gitDecoration.modifiedResourceForeground'), 
                 propagate: false 
             };

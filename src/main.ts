@@ -177,7 +177,7 @@ async function executeLfsCommand(command: string, fileUri?: vscode.Uri, lockId?:
         await exec(gitCommand, { cwd: workspacePath });
 
         // Success: Show popup only
-        vscode.window.showInformationMessage(`✓ ${command.charAt(0).toUpperCase() + command.slice(1)}ed: ${displayName}`);
+        vscode.window.showInformationMessage(`${command.charAt(0).toUpperCase() + command.slice(1)}ed: ${displayName}`);
 
         // Refresh lock state after successful operation
         if (lockManager) {
@@ -186,12 +186,14 @@ async function executeLfsCommand(command: string, fileUri?: vscode.Uri, lockId?:
 
     } catch (error: any) {
         // Error: Show popup AND open terminal with error details
-        vscode.window.showErrorMessage(`✗ Failed to ${command}: ${error.message}`);
+        const errorMessage = error.message.split('\n');
+        vscode.window.showErrorMessage(`${errorMessage[1]}`);
 
         // Show terminal with the failed command for debugging
         const terminal = vscode.window.activeTerminal || vscode.window.createTerminal({ name: "Git LFS", cwd: workspacePath });
         terminal.show();
         // Note: We don't re-execute the command, just show it for reference
-        terminal.sendText(`# Previous command failed: ${error.message}`);
+        terminal.sendText(`# ${errorMessage[0]}`);
+        terminal.sendText(`# ${errorMessage[1]}`);
     }
 }

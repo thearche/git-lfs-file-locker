@@ -60,7 +60,7 @@ export class LockManager {
             this._onDidChangeLocks.fire();
 
         } catch (error) {
-            console.error('Fehler beim Laden der LFS Locks:', error);
+            console.error('LFS Locks Error:', error);
         }
     }
 
