@@ -6,6 +6,14 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.6] - 2026-06-12
+
+### Behoben (Fixed)
+
+- **Errorhandling** optimiert und wird nicht mehr als eigener Prompt im Terminal ausgegeben
+
+---
+
 ## [0.7.5] - 2026-04-24
 
 ### Behoben (Fixed)
