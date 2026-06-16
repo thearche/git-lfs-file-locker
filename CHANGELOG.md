@@ -6,6 +6,14 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.7] - 2026-06-16
+
+### Hinzugefügt (Added)
+
+- **More Context** "git-lfs-file-locker.lockFile" und "git-lfs-file-locker.unlockFile" in editor/title/context
+
+---
+
 ## [0.7.6] - 2026-06-12
 
 ### Behoben (Fixed)
