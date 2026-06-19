@@ -7,7 +7,7 @@ A Visual Studio Code extension to manage Git LFS file locks directly from the ed
 - **Lock/Unlock Files:**
   - Adds context menu items to lock or unlock files tracked by Git LFS.
 - **Intelligent AL File Locking:**
-  - When locking/unlocking a `.al` file, the extension automatically finds the corresponding layout file (e.g., `.docx`) and applies the lock to it.
+  - When locking/unlocking `.al` files, the extension automatically finds the corresponding layout file (e.g., `.docx`) and applies the lock to it.
 - **Native Tree View for Active Locks:**
   - A native tree view in the Activity Bar lists all current LFS locks for a clean and integrated experience.
   - Provides context menu actions to unlock or reveal files directly from the view.
@@ -19,8 +19,8 @@ A Visual Studio Code extension to manage Git LFS file locks directly from the ed
 
 ## Usage
 
-1. **Lock/Unlock a File:**
-   - Right-click a file in the Explorer and select `Git LFS: Lock File` or `Git LFS: Unlock File`.
+1. **Lock/Unlock Files:**
+   - Right-click files in the Explorer and select `Git LFS: Lock File` or `Git LFS: Unlock File`.
 2. **View Active Locks:**
    - Open the "Git LFS" view in the Activity Bar.
    - Use the context menu on a locked file to unlock or reveal it.

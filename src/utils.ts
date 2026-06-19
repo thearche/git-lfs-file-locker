@@ -86,6 +86,25 @@ export function getUriForCommand(uri: vscode.Uri | undefined): vscode.Uri | unde
 }
 
 /**
+ * Gets the URIs for a command, either from the provided URI/URI array or the active text editor.
+ * @param uri - The URI or URI array passed to the command.
+ * @returns The determined URIs, or an empty array if none can be found.
+ */
+export function getUrisForCommand(uri: vscode.Uri | undefined, uris: vscode.Uri[] | undefined): vscode.Uri[] {
+    if (Array.isArray(uris) && uris.length > 0) {
+        return uris.filter(item => item && item.fsPath);
+    }
+    if (uri && 'fsPath' in uri && uri.fsPath) {
+        return [uri];
+    }
+    const activeEditor = vscode.window.activeTextEditor;
+    if (activeEditor) {
+        return [activeEditor.document.uri];
+    }
+    return [];
+}
+
+/**
  * Kombiniert einen Workspace-Pfad mit einem relativen Pfad.
  * Beachtet dabei, ob der relative Pfad bereits Teile des Workspace-Pfades enthält,
  * um doppelte Pfadsegmente zu vermeiden. Findet den längstmöglichen gemeinsamen Suffix/Präfix.

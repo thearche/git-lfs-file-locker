@@ -6,11 +6,19 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ---
 
+## [0.7.8] - 2026-06-19
+
+### Hinzugefügt (Added)
+
+- **getUrisForCommand** "git-lfs-file-locker.lockFile" und "git-lfs-file-locker.unlockFile" unterstützen nun mehrere Dateien als vscode.Uri[] Parameter 
+
+---
+
 ## [0.7.7] - 2026-06-16
 
 ### Hinzugefügt (Added)
 
-- **More Context** "git-lfs-file-locker.lockFile" und "git-lfs-file-locker.unlockFile" in editor/title/context
+- **More Context:** "git-lfs-file-locker.lockFile" und "git-lfs-file-locker.unlockFile" in editor/title/context
 
 ---
 
@@ -18,7 +26,7 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Behoben (Fixed)
 
-- **Errorhandling** optimiert und wird nicht mehr als eigener Prompt im Terminal ausgegeben
+- **Errorhandling:** optimiert und wird nicht mehr als eigener Prompt im Terminal ausgegeben
 
 ---
 
@@ -26,7 +34,7 @@ Das Format basiert auf [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 
 ### Behoben (Fixed)
 
-- **absolutePath** nun auch wirklich korrekt aufgelöst
+- **absolutePath:** nun auch wirklich korrekt aufgelöst
 
 ---
 

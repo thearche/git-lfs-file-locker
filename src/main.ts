@@ -5,7 +5,7 @@ import vscode from 'vscode';
 import { GitLfsDecorationProvider } from './decorationProvider';
 import { LockManager } from './lockManager';
 import { LfsLocksTreeDataProvider, LfsLockTreeItem } from './treeDataProvider';
-import { combinePaths, getBasename, getRelativePath, getUriForCommand, getWorkspacePath } from './utils';
+import { combinePaths, getBasename, getRelativePath, getUrisForCommand, getWorkspacePath } from './utils';
 import { fetchLocksAndUpdateWebview, showLocks } from './webView';
 
 const exec = promisify(cp.exec);
@@ -19,22 +19,22 @@ export function activate(context: vscode.ExtensionContext) {
     const treeDataProvider = new LfsLocksTreeDataProvider(lockManager);
     vscode.window.registerTreeDataProvider('gitLfsLocksView', treeDataProvider);
 
-    context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.lockFile', async (uri: vscode.Uri) => {
-        const fileUri = getUriForCommand(uri);
-        if (!fileUri) {
+    context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.lockFile', async (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        const fileUris = getUrisForCommand(uri, uris);
+        if (!fileUris.length) {
             vscode.window.showErrorMessage('No file selected or active to lock.');
             return;
         }
-        await executeLfsCommand('lock', fileUri, undefined, lockManager);
+        await Promise.all(fileUris.map(fileUri => executeLfsCommand('lock', fileUri, undefined, lockManager)));
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.unlockFile', async (uri: vscode.Uri) => {
-        const fileUri = getUriForCommand(uri);
-        if (!fileUri) {
+    context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.unlockFile', async (uri: vscode.Uri, uris: vscode.Uri[]) => {
+        const fileUris = getUrisForCommand(uri, uris);
+        if (!fileUris.length) {
             vscode.window.showErrorMessage('No file selected or active to unlock.');
             return;
         }
-        await executeLfsCommand('unlock', fileUri, undefined, lockManager);
+        await Promise.all(fileUris.map(fileUri => executeLfsCommand('unlock', fileUri, undefined, lockManager)));
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('git-lfs-file-locker.showLocks', () => {
