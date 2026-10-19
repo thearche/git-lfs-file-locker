@@ -35,3 +35,5 @@ A Visual Studio Code extension to manage Git LFS file locks directly from the ed
 
 ## Release Notes
 See [CHANGELOG.md](./CHANGELOG.md) for details.
+
+:)
